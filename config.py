@@ -12,7 +12,7 @@ else:
     TRAINING_FRAMEWORK = "transformers"
 
 # Email configurations
-USER_NAME = "Yicong (Alan) Zheng"
+USER_NAME = ""
 EMAIL_CONFIG = {
     "bot_signature": "\n\n[This is an AI-generated draft response from LAMBDA. Please carefully review the response before sending it.]",
     "bot_label": "LAMBDA",

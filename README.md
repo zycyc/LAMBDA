@@ -36,23 +36,22 @@ pip install -r requirements.txt
 
 ## Usage
 
-### 1. Create Training Dataset
+Run the LAMBDA interface:
 ```bash
-python create_dataset.py --output email_dataset.csv
+python lambda.py
 ```
 
-### 2. Train Model
-```bash
-python train_model.py --dataset email_dataset.csv --output model_output
-```
+The interactive menu will guide you through the following options:
+1. Create/Update training dataset
+2. Train model
+3. Run email bot
+4. Run complete workflow (all steps)
+5. Exit
 
-### 3. Run Email Bot
-```bash
-python lambda_bot.py
-```
+On first run, you'll be prompted to enter your name if not already configured. This name will be used by the AI to personalize responses.
 
 The bot will:
-- Check for unread emails every 5 minutes (adjustable with --interval)
+- Check for unread emails every 5 minutes (adjustable in config.py)
 - Generate responses using your fine-tuned model
 - Create draft responses in Gmail
 - Skip threads that already have drafts
@@ -63,6 +62,7 @@ LAMBDA/
 ├── README.md
 ├── requirements.txt
 ├── config.py              # Configuration settings
+├── *lambda.py*            # Main interface script
 ├── create_dataset.py      # Gmail data extraction
 ├── train_model.py         # Model fine-tuning
 ├── lambda_bot.py          # Email bot implementation

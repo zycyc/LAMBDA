@@ -50,5 +50,8 @@ token.pickle
 *.bin
 *.model
 
+# Mac
+.DS_Store
+
 # Logs
 *.log
