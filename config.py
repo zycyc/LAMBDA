@@ -40,3 +40,20 @@ RESPONSE_TEMPLATE = """{bot_signature}
 {generated_response}
 
 """
+
+# Default fine-tuning configuration
+FINE_TUNE_CONFIG = {
+    "fine_tune_type": "lora",
+    "iters": 1000,
+    "batch_size": 4,
+    "lora_layers": 16,
+    "learning_rate": 1e-5,
+    "val_batches": 25,
+    "steps_per_report": 10,
+    "steps_per_eval": 200,
+    "max_seq_length": 2048,
+    "save_every": 100,
+    "grad_checkpoint": False,
+    "seed": 42,
+    "resume_adapter_file": None,
+}

@@ -117,7 +117,7 @@ LAMBDA/
 ## Configuration
 Edit `config.py` to customize:
 - Model selection
-- Training parameters
+- Training hyperparameters
 - Email settings
 - Response templates
 

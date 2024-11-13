@@ -4,7 +4,6 @@ import json
 import pandas as pd
 from typing import Optional, List, Dict
 import config
-from tqdm import tqdm
 import subprocess
 import yaml
 from sklearn.model_selection import train_test_split
@@ -21,23 +20,9 @@ class ModelTrainer:
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
-        # Default fine-tuning configuration
-        self.fine_tune_config = {
-            "fine_tune_type": "lora",  # lora, dora, or full
-            "iters": 1000,
-            "batch_size": 4,
-            "lora_layers": 16,
-            "learning_rate": 1e-5,
-            "val_batches": 25,
-            "steps_per_report": 10,
-            "steps_per_eval": 200,
-            "max_seq_length": 2048,
-            "save_every": 100,
-            "grad_checkpoint": False,
-            "seed": 42,
-            "adapter_path": os.path.join(output_dir, "adapters"),
-            "resume_adapter_file": None,
-        }
+        # Initialize fine-tuning configuration from config.py
+        self.fine_tune_config = config.FINE_TUNE_CONFIG.copy()
+        self.fine_tune_config["adapter_path"] = os.path.join(output_dir, "adapters")
 
     def prepare_dataset(self) -> tuple[str, str, str, str]:
         """
@@ -112,8 +97,6 @@ class ModelTrainer:
 
             # Prepare MLX LoRA training command
             command = [
-                # "python",
-                # "-m",
                 "mlx_lm.lora",
                 "--model",
                 config.BASE_MODEL,
@@ -157,22 +140,38 @@ class ModelTrainer:
             logging.error(f"Error in MLX training: {str(e)}")
             yield f"Error in MLX training: {str(e)}"
 
-    def load_fine_tuned_model(self, adapter_path: Optional[str] = None):
-        """Load the fine-tuned model with adapters"""
-        if adapter_path is None:
-            adapter_path = self.fine_tune_config["adapter_path"]
 
-        try:
-            from mlx_lm import load
+def find_latest_adapter_file(adapter_path: str) -> Optional[str]:
+    """
+    Find the most recently created adapter file matching pattern '00*adapters.safetensors'
 
-            # Load base model with adapters
-            model, tokenizer = load(config.BASE_MODEL, adapter_path=adapter_path)
+    Args:
+        adapter_path: Directory path containing adapter files
 
-            return model, tokenizer
+    Returns:
+        Optional[str]: Path to the latest adapter file, or None if no files found
+    """
+    if not os.path.exists(adapter_path):
+        return None
 
-        except Exception as e:
-            logging.error(f"Error loading fine-tuned model: {str(e)}")
-            return None, None
+    # Find all files matching the pattern
+    adapter_files = [
+        f
+        for f in os.listdir(adapter_path)
+        if f.startswith("00") and f.endswith("adapters.safetensors")
+    ]
+
+    if not adapter_files:
+        return None
+
+    # Get full path and creation time for each file
+    files_with_time = [
+        (os.path.join(adapter_path, f), os.path.getctime(os.path.join(adapter_path, f)))
+        for f in adapter_files
+    ]
+
+    # Return the path of the most recently created file
+    return max(files_with_time, key=lambda x: x[1])[0]
 
 
 def main():
@@ -182,37 +181,34 @@ def main():
     parser.add_argument("--dataset", required=True, help="Path to dataset CSV")
     parser.add_argument("--output", required=True, help="Output directory for model")
 
-    # Add fine-tuning specific arguments
-    parser.add_argument(
-        "--fine-tune-type", default="lora", choices=["lora", "dora", "full"]
-    )
-    parser.add_argument("--iterations", type=int, default=100)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--lora-layers", type=int, default=16)
-    parser.add_argument("--learning-rate", type=float, default=1e-5)
-    parser.add_argument(
-        "--resume-adapter", help="Path to resume training with given adapters"
-    )
-
     args = parser.parse_args()
 
     # Create trainer
     trainer = ModelTrainer(args.dataset, args.output)
 
-    # Update fine-tuning config from arguments
-    fine_tune_config = {
-        "fine_tune_type": args.fine_tune_type,
-        "iters": args.iterations,
-        "batch_size": args.batch_size,
-        "lora_layers": args.lora_layers,
-        "learning_rate": args.learning_rate,
-    }
-    if args.resume_adapter:
-        fine_tune_config["resume_adapter_file"] = args.resume_adapter
+    # if adapter exists, ask if want to resume training or start over or do nothing
+    def _train():
+        for output in trainer.train(trainer.fine_tune_config):
+            logging.info(output)
 
-    # Start training
-    for output in trainer.train(fine_tune_config):
-        print(output)
+    resume_adapter_file = find_latest_adapter_file(
+        trainer.fine_tune_config["adapter_path"]
+    )
+    if resume_adapter_file:
+        response = input(
+            f"Found latest adapter file: {resume_adapter_file}. Do you want to resume training (r) or start over (s) or do nothing (n)? (r/s/n): "
+        )
+        if response.lower() == "r":
+            trainer.fine_tune_config["resume_adapter_file"] = resume_adapter_file
+            _train()
+        elif response.lower() == "s":
+            logging.info("Starting training from scratch.")
+            _train()
+        elif response.lower() == "n":
+            logging.info("Do nothing in train_model.py.")
+    else:
+        logging.info("No existing adapter found. Starting training from scratch.")
+        _train()
 
 
 if __name__ == "__main__":
