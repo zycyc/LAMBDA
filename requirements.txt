@@ -1,0 +1,22 @@
+# Core dependencies
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-api-python-client==2.152.0
+pandas==2.2.3
+pyyaml==6.0.2
+beautifulsoup4==4.12.3
+scikit-learn==1.5.2
+tqdm
+
+# MLX dependencies (for Mac)
+mlx==0.20.0 ; platform_system == "Darwin" and platform_machine == "arm64"
+mlx-lm==0.19.3 ; platform_system == "Darwin" and platform_machine == "arm64"
+
+# Transformers dependencies (for CUDA)
+torch ; platform_system != "Darwin"
+transformers ; platform_system != "Darwin"
+safetensors ; platform_system != "Darwin"
+
+# Utilities
+requests==2.32.3
+typing_extensions==4.12.2
