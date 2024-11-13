@@ -100,7 +100,6 @@ class EmailDatasetCreator:
                 logging.error(f"Missing required columns: {missing_columns}")
                 return
 
-            # Create prompt format similar to original LLMMe
             df["prompt"] = df.apply(
                 lambda x: f"""From: {x['reply_from']}
                 To: {x['reply_to']}
@@ -110,7 +109,6 @@ class EmailDatasetCreator:
                 {x['original_content']}""",
                 axis=1,
             )
-
             df["completion"] = df["reply_content"]
 
             # Save dataset

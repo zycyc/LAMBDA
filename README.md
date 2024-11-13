@@ -1,5 +1,10 @@
 # LAMBDA (LocalAutoMailBoxDraftAssistant)
-An AI-based email automation system that learns from your email style and creates draft responses using MLX.
+A local AI-powered email automation system that learns from your email style and creates draft responses for every unread email in your (Gmail) inbox.
+
+Motivations:
+- Save time replying to emails -- **JUST Open the draft and Send**
+- Keep all data and model to yourself -- **No cloud, no tracking**
+- Something everyone can use everyday -- **Set up in less than 10 minutes and forget about it**
 
 ## Features
 - Automatically extracts your email communication patterns from Gmail
@@ -27,7 +32,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Enable Gmail API and Setup Credentials:
+3. Enable Gmail API and Setup Credentials (only takes about 5 minutes):
    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
    2. Create a new project:
       - Click on the project dropdown at the top of the page
@@ -74,16 +79,16 @@ pip install -r requirements.txt
 
    Note: When you first run the application, it will open a browser window asking you to authorize the application. This is normal and only needs to be done once.
 
-   Troubleshooting:
-   - If you get a "Google hasn't verified this app" screen, click "Advanced" and then "Go to [Your App Name] (unsafe)"
-   - This warning appears because you're using a development version of the app
-   - The app only accesses your own Gmail account based on the permissions you grant
 
 ## Usage
 
 Run the LAMBDA interface:
 ```bash
 python lambda.py
+```
+or run the bot in background once you're satisfied with everything:
+```bash
+nohup python lambda_bot.py &> lambda_bot.log &
 ```
 
 The interactive menu will guide you through the following options:
@@ -122,9 +127,15 @@ Edit `config.py` to customize:
 - Response templates
 
 ## TODO
+- [ ] Shortcuts support for voice-input-based rewriting (whisper)
+- [ ] A configurable list of senders to ignore (e.g., no-reply@example.com)
 - [ ] Windows support (now only tested on Mac)
 - [ ] RAG support for personal knowledge base
 - [ ] ...
 
 ## License
 MIT License - see LICENSE file for details
+
+## Acknowledgements
+- [MLX team](https://github.com/ml-explore/mlx) for bringing LLMs to M-chip Macs with increasingly improved APIs
+- [LLMMe](https://github.com/pizzato/LLMMe) for initiating this project (I rewrote and streamlined the code to be more user-friendly)
