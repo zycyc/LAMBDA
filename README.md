@@ -1,7 +1,17 @@
+![LAMBDA](LAMBDA_banner.png)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/zycyc/LAMBDA/graphs/commit-activity)
+[![GitHub issues](https://img.shields.io/github/issues/zycyc/LAMBDA)](https://github.com/zycyc/LAMBDA/issues)
+[![GitHub stars](https://img.shields.io/github/stars/zycyc/LAMBDA)](https://github.com/zycyc/LAMBDA/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/zycyc/LAMBDA)](https://github.com/zycyc/LAMBDA/network)
+[![GitHub last commit](https://img.shields.io/github/last-commit/zycyc/LAMBDA)](https://github.com/zycyc/LAMBDA/commits/main)
+
 # LAMBDA (LocalAutoMailBoxDraftAssistant)
 A local AI-powered email automation system that learns from your email style and creates draft responses for every unread email in your (Gmail) inbox.
 
-Motivations:
 - Save time replying to emails -- **JUST Open the draft and Send**
 - Keep all data and model to yourself -- **No cloud, no tracking**
 - Something everyone can use everyday -- **Set up in less than 10 minutes and forget about it**
