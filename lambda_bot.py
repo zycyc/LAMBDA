@@ -54,10 +54,10 @@ class LambdaBot:
 
             tokenizer = AutoTokenizer.from_pretrained(self.model_path)
             # Add padding token configuration
-            tokenizer.pad_token = tokenizer.eos_token
-            tokenizer.padding_side = (
-                "right"  # This is usually preferred for decoder models
-            )
+            # tokenizer.pad_token = tokenizer.eos_token
+            # tokenizer.padding_side = (
+            #     "right"  # This is usually preferred for decoder models
+            # )
 
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_path, torch_dtype=torch.float16, device_map="auto"
@@ -90,21 +90,25 @@ class LambdaBot:
                 prompt=prompt,
                 max_tokens=config.EMAIL_CONFIG["max_response_length"],
             )
-        else:
+        else:  # Windows/Linux CUDA
             # Transformers generation
             inputs = self.tokenizer(
                 prompt,
                 return_tensors="pt",
                 max_length=config.EMAIL_CONFIG["max_response_length"],
-                padding=True,
+                padding=False,
             ).to("cuda")
 
             outputs = self.model.generate(
                 **inputs,
                 max_length=config.EMAIL_CONFIG["max_response_length"],
                 num_return_sequences=1,
+                pad_token_id=self.tokenizer.eos_token_id,
             )
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            prompt_length = inputs["input_ids"].shape[1]
+            response = self.tokenizer.decode(
+                outputs[0][prompt_length:], skip_special_tokens=True
+            )
 
         # Let's ask the model to format our response a bit nicer
         format_prompt = self.tokenizer.apply_chat_template(
@@ -115,12 +119,32 @@ class LambdaBot:
             tokenize=False,
             add_generation_prompt=True,
         )
-        formatted_response = generate(
-            model=self.model,
-            tokenizer=self.tokenizer,
-            prompt=format_prompt,
-            max_tokens=config.EMAIL_CONFIG["max_response_length"],
-        )
+
+        # Format response by generating again
+        if config.IS_MAC:
+            formatted_response = generate(
+                model=self.model,
+                tokenizer=self.tokenizer,
+                prompt=format_prompt,
+                max_tokens=config.EMAIL_CONFIG["max_response_length"],
+            )
+        else:
+            inputs = self.tokenizer(
+                format_prompt,
+                return_tensors="pt",
+                max_length=config.EMAIL_CONFIG["max_response_length"],
+                padding=False,
+            ).to("cuda")
+            outputs = self.model.generate(
+                **inputs,
+                max_length=config.EMAIL_CONFIG["max_response_length"],
+                num_return_sequences=1,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+            prompt_length = inputs["input_ids"].shape[1]
+            formatted_response = self.tokenizer.decode(
+                outputs[0][prompt_length:], skip_special_tokens=True
+            )
 
         return config.RESPONSE_TEMPLATE.format(
             generated_response=formatted_response,
