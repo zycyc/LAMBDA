@@ -146,15 +146,41 @@ Edit `config.py` to customize:
 - Email settings
 - Response templates
 
+## Email Filtering
+LAMBDA provides multiple ways to filter which emails get processed:
+
+### 1. Gmail Labels (Automatic)
+By default, LAMBDA skips emails with the following Gmail labels:
+- CATEGORY_SOCIAL (social media notifications)
+- CATEGORY_UPDATES (automatic updates)
+- CATEGORY_FORUMS (forum posts)
+- CATEGORY_PROMOTIONS (marketing emails)
+
+### 2. Sender Blacklist (Manual)
+You can manually specify which senders to ignore by adding their email addresses to `blacklist.txt`:
+1. Open `blacklist.txt` in any text editor
+2. Add one email address per line
+3. You can use partial matches - they will match anywhere in the sender's email
+4. Lines starting with # are treated as comments
+
+Example blacklist.txt:
+```text
+no-reply@
+newsletter@
+notifications@
+marketing@
+```
+This would skip any emails from addresses containing these strings (e.g., no-reply@company.com, marketing@example.com)
+
 ## TODO
 - [x] CUDA QLoRA support
+- [x] Windows support (now only tested on Mac)
+- [x] Filter out spam ads emails by using replied rate (or is there some API for this?)
+- [x] A configurable list of senders to ignore (e.g., no-reply@example.com)
 - [ ] Shortcuts support for voice-input-based rewriting (whisper)
-- [ ] A configurable list of senders to ignore (e.g., no-reply@example.com)
-- [ ] Windows support (now only tested on Mac)
 - [ ] RAG support for personal knowledge base
 - [ ] Outlook Exchange support
 - [ ] Labeling emails for priorities / categories
-- [ ] Filter out spam ads emails by using replied rate (or is there some API for this?)
 - [ ] ...
 
 ## License

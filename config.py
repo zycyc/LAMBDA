@@ -21,6 +21,12 @@ EMAIL_CONFIG = {
     "max_thread_length": 1000,
     "system_prompt": "You are {USER_NAME}. You will receive an email and your job is to write a response to the email as if you were {USER_NAME}.",
     "format_prompt": "Please add proper punctuation and capitalization, and separate paragraphs properly. Please only return the response, no other text.",
+    "ignore_labels": {
+        "CATEGORY_SOCIAL",
+        "CATEGORY_UPDATES",
+        "CATEGORY_FORUMS",
+        "CATEGORY_PROMOTIONS",
+    },
 }
 
 # Prompt template for training

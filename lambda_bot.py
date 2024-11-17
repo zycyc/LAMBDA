@@ -155,13 +155,16 @@ class LambdaBot:
         """Process all unread emails and create draft responses"""
         unread_messages = self.gmail_api.list_messages_with_label("UNREAD")
 
-        # Define labels to ignore
-        IGNORE_LABELS = {
-            "CATEGORY_SOCIAL",
-            "CATEGORY_UPDATES",
-            "CATEGORY_FORUMS",
-            "CATEGORY_PROMOTIONS",
-        }
+        # Load blacklist
+        blacklist = set()
+        blacklist_path = os.path.join(os.path.dirname(__file__), "blacklist.txt")
+        if os.path.exists(blacklist_path):
+            with open(blacklist_path, "r") as f:
+                blacklist = {
+                    line.strip().lower()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                }
 
         for message in unread_messages:
             try:
@@ -169,8 +172,23 @@ class LambdaBot:
                 msg_detail = self.gmail_api.get_message_detail(message["id"])
                 msg_labels = set(msg_detail.get("labelIds", []))
 
+                # Get sender email
+                sender = self.gmail_api._get_header(msg_detail, "From").lower()
+                sender_email = (
+                    sender[sender.find("<") + 1 : sender.find(">")]
+                    if "<" in sender
+                    else sender
+                )
+
+                # Skip if sender is in blacklist
+                if any(blocked in sender_email for blocked in blacklist):
+                    logging.info(
+                        f"Skipping message {message['id']}, from: {sender} - sender is blacklisted"
+                    )
+                    continue
+
                 # Skip if message has any of the ignored labels
-                if msg_labels & IGNORE_LABELS:
+                if msg_labels & config.EMAIL_CONFIG["ignore_labels"]:
                     logging.info(
                         f"Skipping message {message['id']}, snippet: {msg_detail['snippet']} - has ignored label(s): {msg_labels}"
                     )

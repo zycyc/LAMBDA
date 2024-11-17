@@ -1,0 +1,10 @@
+# Add email addresses to ignore (one per line)
+# You can use partial matches - they will match anywhere in the sender's email
+# Examples:
+no-reply@
+newsletter@
+notifications@
+noreply@
+do-not-reply@
+donotreply@
+marketing@ 
