@@ -10,7 +10,7 @@ Motivations:
 - Automatically extracts your email communication patterns from Gmail
 - Fine-tunes LLaMA models on your email style using LoRA
 - Creates AI-generated draft responses for unread emails
-- Supports both Apple Silicon (MLX) and CUDA GPUs (NOTE: CUDA has NOT been implemented yet)
+- Supports both Apple Silicon (MLX) and CUDA GPUs
 
 ## Requirements
 - Python 3.10+
@@ -19,22 +19,15 @@ Motivations:
 - For others: CUDA compatible GPU
 
 ## Installation
-1. Clone the repository:
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/zycyc/LAMBDA.git
 cd LAMBDA
 ```
 
-2. Install dependencies:
+2. **Install dependencies:**
 
 For Mac (Apple Silicon) and Linux:
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-For Linux:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -59,7 +52,7 @@ Note: If you encounter any issues with PyTorch installation:
   pip3 install torch torchvision torchaudio
   ```
 
-3. Enable Gmail API and Setup Credentials (only takes about 5 minutes):
+3. **Enable Gmail API and Setup Credentials (only takes about 5 minutes):**
    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
    2. Create a new project:
       - Click on the project dropdown at the top of the page
@@ -154,12 +147,11 @@ Edit `config.py` to customize:
 - Response templates
 
 ## TODO
-- [ ] CUDA support
+- [x] CUDA QLoRA support
 - [ ] Shortcuts support for voice-input-based rewriting (whisper)
 - [ ] A configurable list of senders to ignore (e.g., no-reply@example.com)
 - [ ] Windows support (now only tested on Mac)
 - [ ] RAG support for personal knowledge base
-- [ ] QLORA support
 - [ ] Outlook Exchange support
 - [ ] Labeling emails for priorities / categories
 - [ ] Filter out spam ads emails by using replied rate (or is there some API for this?)
