@@ -131,6 +131,7 @@ The bot will:
 LAMBDA/
 ├── README.md
 ├── requirements.txt
+├── blacklist.txt          # Sender blacklist to ignore
 ├── config.py              # Configuration settings
 ├── lambda.py              # Main interface script
 ├── create_dataset.py      # Gmail data extraction
@@ -171,6 +172,16 @@ notifications@
 marketing@
 ```
 This would skip any emails from addresses containing these strings (e.g., no-reply@company.com, marketing@example.com)
+
+## Q&A
+- **Can I run this on X computer with a Y GPU?**
+  - Non-M-chip Macs are not supported. Otherwise, as long as it comes with a M-Chip or a CUDA-compatible GPU, it should work.
+- **Do I have enough GPU power to run this? Can I run smaller/quicker models?**
+  - It reallydepends. In general, I'd recommend asking any LLMs for a proper setup of hyperparameters that you'd want to put in `config.py`. For Mac users, [mlx docs](https://github.com/ml-explore/mlx-examples/blob/main/lora/README.md) offers useful instructions (including how to convert the default LoRA model to QLoRA format).
+- **Will this work with my Outlook email?**
+  - No, this is a Gmail-only tool for now. I got some example scripts for Outlook, but they are not fully tested & integrated yet. The key difficulty is that there're many Gmail-specific APIs that have already been built into the current version.
+- **Anything else?**
+  - Feel free to file an issue on Github!
 
 ## TODO
 - [x] CUDA QLoRA support
