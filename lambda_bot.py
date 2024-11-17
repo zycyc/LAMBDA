@@ -155,11 +155,29 @@ class LambdaBot:
         """Process all unread emails and create draft responses"""
         unread_messages = self.gmail_api.list_messages_with_label("UNREAD")
 
+        # Define labels to ignore
+        IGNORE_LABELS = {
+            "CATEGORY_SOCIAL",
+            "CATEGORY_UPDATES",
+            "CATEGORY_FORUMS",
+            "CATEGORY_PROMOTIONS",
+        }
+
         for message in unread_messages:
             try:
                 # Check if already processed
                 msg_detail = self.gmail_api.get_message_detail(message["id"])
-                if config.EMAIL_CONFIG["bot_label"] in msg_detail.get("labelIds", []):
+                msg_labels = set(msg_detail.get("labelIds", []))
+
+                # Skip if message has any of the ignored labels
+                if msg_labels & IGNORE_LABELS:
+                    logging.info(
+                        f"Skipping message {message['id']}, snippet: {msg_detail['snippet']} - has ignored label(s): {msg_labels}"
+                    )
+                    continue
+
+                # Skip if message has the bot label
+                if config.EMAIL_CONFIG["bot_label"] in msg_labels:
                     continue
 
                 # Get thread details
