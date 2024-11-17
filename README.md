@@ -10,7 +10,7 @@ Motivations:
 - Automatically extracts your email communication patterns from Gmail
 - Fine-tunes LLaMA models on your email style using LoRA
 - Creates AI-generated draft responses for unread emails
-- Supports both Apple Silicon (MLX) and CUDA GPUs
+- Supports both Apple Silicon (MLX) and CUDA GPUs (NOTE: CUDA has NOT been implemented yet)
 
 ## Requirements
 - Python 3.10+
@@ -127,10 +127,15 @@ Edit `config.py` to customize:
 - Response templates
 
 ## TODO
+- [ ] CUDA support
 - [ ] Shortcuts support for voice-input-based rewriting (whisper)
 - [ ] A configurable list of senders to ignore (e.g., no-reply@example.com)
 - [ ] Windows support (now only tested on Mac)
 - [ ] RAG support for personal knowledge base
+- [ ] QLORA support
+- [ ] Outlook Exchange support
+- [ ] Labeling emails for priorities / categories
+- [ ] Filter out spam ads emails by using replied rate (or is there some API for this?)
 - [ ] ...
 
 ## License
