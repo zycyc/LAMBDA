@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 import os
 from gmail_utils import GmailAPI
@@ -69,8 +70,15 @@ class LambdaBot:
         """Generate response using the loaded model"""
         # Create messages list for chat template
         messages = [
-            {"role": "system", "content": config.EMAIL_CONFIG["system_prompt"]},
-            {"role": "user", "content": email_thread},
+            {
+                "role": "system",
+                "content": str(
+                    config.EMAIL_CONFIG["system_prompt"].format(
+                        user_name=config.USER_NAME
+                    )
+                ),
+            },
+            {"role": "user", "content": str(email_thread)},
         ]
 
         # Apply chat template
@@ -88,6 +96,7 @@ class LambdaBot:
                 prompt=prompt,
                 max_tokens=config.EMAIL_CONFIG["max_response_length"],
             )
+            # logging.info(f"First generated response: {response}")
         else:  # Windows/Linux CUDA
             # Transformers generation
             inputs = self.tokenizer(
@@ -127,6 +136,7 @@ class LambdaBot:
                 prompt=format_prompt,
                 max_tokens=config.EMAIL_CONFIG["max_response_length"],
             )
+            # logging.info(f"Formatted response: {formatted_response}")
         else:
             inputs = self.tokenizer(
                 format_prompt,
@@ -146,8 +156,21 @@ class LambdaBot:
                 outputs[0][prompt_length:], skip_special_tokens=True
             )
 
+        # Final manual cleanup
+        # 1. if a line starts with "Subject: ", remove the line
+        formatted_response = re.sub(
+            r"^Subject:.*\n", "", formatted_response, flags=re.MULTILINE
+        )
+        # 2. if a line starts with "Re: ", remove the line
+        formatted_response = re.sub(
+            r"^Re:.*\n", "", formatted_response, flags=re.MULTILINE
+        )
+        # 3. if a line starts with "LAMBDA", remove the line
+        formatted_response = re.sub(
+            r"^LAMBDA.*\n", "", formatted_response, flags=re.MULTILINE
+        )
         return config.RESPONSE_TEMPLATE.format(
-            generated_response=formatted_response,
+            generated_response=formatted_response.strip(),
             bot_signature=config.EMAIL_CONFIG["bot_signature"],
         )
 
@@ -207,17 +230,21 @@ class LambdaBot:
                     continue
 
                 thread_messages = self.gmail_api.get_thread_detail(thread_id)
-                conversation_history, _ = self.gmail_api.extract_conversation(
-                    thread_messages, max_len=config.EMAIL_CONFIG["max_thread_length"]
+                conversation_history, second_to_last_message, _ = (
+                    self.gmail_api.extract_conversation(
+                        thread_messages,
+                        max_len=config.EMAIL_CONFIG["max_thread_length"],
+                    )
                 )
 
-                # Prepare email context
+                # Prepare email context for prompt
                 email_context = config.PROMPT_TEMPLATE.format(
-                    email_thread=conversation_history,
-                    reply_from=self.gmail_api._get_header(msg_detail, "To"),
-                    reply_to=self.gmail_api._get_header(msg_detail, "From"),
+                    reply_from=self.gmail_api._get_header(msg_detail, "From"),
+                    reply_to=self.gmail_api._get_header(msg_detail, "To"),
                     reply_cc=self.gmail_api._get_header(msg_detail, "Cc"),
                     reply_subject=f"Re: {self.gmail_api._get_header(msg_detail, 'Subject')}",
+                    context=conversation_history,
+                    original_content=second_to_last_message,
                 )
 
                 # Generate response
@@ -236,7 +263,7 @@ class LambdaBot:
                 )
 
                 logging.info(
-                    f"Draft for email from: {self.gmail_api._get_header(msg_detail, 'From')}, snippet: {msg_detail['snippet']} has been generated and saved \n"
+                    f"Draft for email from: {self.gmail_api._get_header(msg_detail, 'From')} has been generated and saved \n"
                 )
 
             except Exception as e:

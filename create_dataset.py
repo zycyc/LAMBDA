@@ -29,23 +29,28 @@ class EmailDatasetCreator:
 
                 # Get original conversation and latest message
                 original_thread = self.gmail_api.get_thread_detail(msg_data["threadId"])
-                (original_conversation, latest_message) = (
-                    self.gmail_api.extract_conversation(
-                        original_thread, config.EMAIL_CONFIG["max_thread_length"]
-                    )
-                )
-
-                # continue on forwarded emails
-                if "Fwd:" in self._get_header(msg_data, "Subject"):
+                if (len(original_thread) == 1) or (
+                    "Fwd:" in self._get_header(msg_data, "Subject")
+                ):
+                    # this is an email we sent ourselves, skip it
                     continue
-
+                (
+                    original_conversation,
+                    second_to_last_message,
+                    latest_message,
+                ) = self.gmail_api.extract_conversation(
+                    original_thread,
+                    config.EMAIL_CONFIG["max_thread_length"],
+                    train=True,
+                )
                 dataset.append(
                     {
                         "reply_from": self._get_header(msg_data, "From"),
                         "reply_to": self._get_header(msg_data, "To"),
                         "reply_cc": self._get_header(msg_data, "Cc"),
                         "reply_subject": self._get_header(msg_data, "Subject"),
-                        "original_content": original_conversation,
+                        "context": original_conversation,
+                        "original_content": second_to_last_message,
                         "reply_content": latest_message,
                     }
                 )
@@ -72,6 +77,7 @@ class EmailDatasetCreator:
         # Define a cache file name based on the output file
         cache_file = output_file.rsplit(".", 1)[0] + "_raw.csv"
 
+        # Load cached raw data if it exists
         if os.path.exists(cache_file):
             logging.info(f"Loading cached raw data from {cache_file}")
             df = pd.read_csv(cache_file)
@@ -85,6 +91,7 @@ class EmailDatasetCreator:
             df.to_csv(cache_file, index=False)
             logging.info(f"Raw data cached to {cache_file}")
 
+        # Create the formatted dataset if it doesn't exist
         if not os.path.exists(output_file):
             # Verify DataFrame has required columns
             required_columns = [
@@ -92,6 +99,7 @@ class EmailDatasetCreator:
                 "reply_to",
                 "reply_cc",
                 "reply_subject",
+                "context",
                 "original_content",
                 "reply_content",
             ]
@@ -99,14 +107,19 @@ class EmailDatasetCreator:
             if missing_columns:
                 logging.error(f"Missing required columns: {missing_columns}")
                 return
+            # If original_content is empty, delete the row (because it's an email we initiated and we don't need that for training)
+            df = df[df["original_content"].notna()]
 
+            # From and To are swapped because the last email was sent from the recipient to the sender
             df["prompt"] = df.apply(
-                lambda x: f"""From: {x['reply_from']}
-                To: {x['reply_to']}
-                Cc: {x['reply_cc']}
-                Subject: {x['reply_subject']}
-
-                {x['original_content']}""",
+                lambda x: config.PROMPT_TEMPLATE.format(
+                    reply_from=x["reply_to"],  # reply_from is the recipient
+                    reply_to=x["reply_from"],  # reply_to is the sender
+                    reply_cc=x["reply_cc"],
+                    reply_subject=x["reply_subject"],
+                    context=x["context"],
+                    original_content=x["original_content"],
+                ),
                 axis=1,
             )
             df["completion"] = df["reply_content"]

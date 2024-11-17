@@ -42,7 +42,11 @@ class ModelTrainer:
             messages = [
                 {
                     "role": "system",
-                    "content": str(config.EMAIL_CONFIG["system_prompt"]),
+                    "content": str(
+                        config.EMAIL_CONFIG["system_prompt"].format(
+                            user_name=config.USER_NAME
+                        )
+                    ),
                 },
                 {"role": "user", "content": str(row["prompt"])},
                 {"role": "assistant", "content": str(row["completion"])},

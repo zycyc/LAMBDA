@@ -12,15 +12,20 @@ else:
     TRAINING_FRAMEWORK = "transformers"
 
 # Email configurations
-USER_NAME = ""
+USER_NAME = "Alan"
 EMAIL_CONFIG = {
     "bot_signature": "\n\n[This is an AI-generated draft response from LAMBDA. Please carefully review the response before sending it.]",
     "bot_label": "LAMBDA",
     "interval": 300,  # in seconds (i.e., 5 minutes)
     "max_response_length": 1000,
     "max_thread_length": 1000,
-    "system_prompt": "You are {USER_NAME}. You will receive an email and your job is to write a response to the email as if you were {USER_NAME}.",
-    "format_prompt": "Please add proper punctuation and capitalization, and separate paragraphs properly. Please only return the response, no other text.",
+    "system_prompt": "You are {user_name}. You will receive an email and your job is to write a response to the email as if you were {user_name}.",
+    "format_prompt": """
+    "Take the provided response and reformat it for proper email communication. Ensure the following:
+    1. Add proper punctuation and capitalization to maintain professionalism.
+    2. Separate ideas into clearly distinct paragraphs for better readability.
+    3. Do not change the content of the response unless necessary to improve readability.
+    Return only the reformatted email response, with no additional text or commentary or email title.""",
     "ignore_labels": {
         "CATEGORY_SOCIAL",
         "CATEGORY_UPDATES",
@@ -30,14 +35,16 @@ EMAIL_CONFIG = {
 }
 
 # Prompt template for training
-PROMPT_TEMPLATE = """Email Thread:
-{email_thread}
+PROMPT_TEMPLATE = """
+Conversation history: {context}
 
-Write a professional response for the following:
+Latest message:
 From: {reply_from}
 To: {reply_to}
 Cc: {reply_cc}
 Subject: {reply_subject}
+
+{original_content}
 """
 
 # Response template for inference

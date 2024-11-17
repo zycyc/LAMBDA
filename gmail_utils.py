@@ -77,7 +77,7 @@ class GmailAPI:
             cleaned_lines.append(line)
 
         # Join lines and clean up extra whitespace
-        cleaned_text = "\n".join(cleaned_lines).strip()
+        cleaned_text = "\n".join(cleaned_lines)
         # Remove multiple consecutive newlines
         cleaned_text = re.sub(r"\n{3,}", "\n\n", cleaned_text)
 
@@ -140,52 +140,80 @@ class GmailAPI:
             return []
 
     def extract_conversation(
-        self, thread_messages: list, max_len: int = 1000
-    ) -> tuple[str, str]:
+        self, thread_messages: list, max_len: int = 1000, train: bool = False
+    ) -> tuple[str, str, str]:
         """
         Extract conversation from thread messages and the latest clean message.
         Args:
             thread_messages: List of messages from get_thread_detail
             max_len: Maximum number of words to return
         Returns:
-            Tuple of (conversation_history, latest_message)
+            Tuple of (conversation_history, second_to_last_message, latest_message)
         """
         # Get the conversation history from all but the last message
-        conversation_parts = []
         word_count = 0
-
-        # Process messages from oldest to newest (excluding the last one)
-        for msg in thread_messages[:-1]:
-            # Extract key information
-            sender = self._get_header(msg, "From")
-            date = self._get_header(msg, "Date")
-            content = self._clean_email_content(self.get_message_text(msg))
-
-            # Format this message
-            message_text = f"On {date}, {sender} wrote:\n{content}\n\n"
-
-            # Count words in this message
-            message_words = len(message_text.split())
-
-            # Check if adding this message would exceed max_len
-            if word_count + message_words > max_len:
-                # If this is the first message, take a truncated version of the latest info
-                if not conversation_parts:
-                    words = message_text.split()[-max_len:]
-                    conversation_parts.append(" ".join(words))
-                break
-
-            conversation_parts.append(message_text)
-            word_count += message_words
-
-        # Get the latest message separately
+        conversation_parts = []
+        second_to_last_message = ""
         latest_message = ""
+
+        # Get the latest message (sent by the user) separately
         if thread_messages:
             latest_msg = thread_messages[-1]
+            # If the latest message is not sent by the user, then iteratively remove the last message until we find the latest message sent by the user
+
+            # use gmail api to get my email address
+            if train:  # training requires the latest message to be sent by the user
+                my_email = (
+                    self.service.users()
+                    .getProfile(userId="me")
+                    .execute()["emailAddress"]
+                )
+                while my_email not in self._get_header(latest_msg, "From"):
+                    thread_messages = thread_messages[:-1]
+                    latest_msg = thread_messages[-1]
+            else:  # in inference, we want to second to last msg to be the one that we're replying to, so we create a placeholder for the last one to mimic thread structure in sentbox (context, second to last that the recepient sent, last that we sent)
+                latest_msg = ""
+                thread_messages += [latest_msg]
+
             latest_content = self.get_message_text(latest_msg)
             latest_message = self._clean_email_content(latest_content)
 
-        return "".join(conversation_parts).strip(), latest_message.strip()
+        # Get the second to last message (sent by other people)
+        if len(thread_messages) > 1:
+            second_to_last_msg = thread_messages[-2]
+            second_to_last_content = self.get_message_text(second_to_last_msg)
+            second_to_last_message = self._clean_email_content(second_to_last_content)
+
+        # Process messages from oldest to newest (excluding the last two)
+        if len(thread_messages) > 2:
+            for msg in thread_messages[:-2]:
+                # Extract key information
+                sender = self._get_header(msg, "From")
+                date = self._get_header(msg, "Date")
+                content = self._clean_email_content(self.get_message_text(msg))
+
+                # Format this message
+                message_text = f"On {date}, {sender} wrote:\n{content}\n\n"
+
+                # Count words in this message
+                message_words = len(message_text.split())
+
+                # Check if adding this message would exceed max_len
+                if word_count + message_words > max_len:
+                    # If this is the first message, take a truncated version of the latest info
+                    if not conversation_parts:
+                        words = message_text.split()[-max_len:]
+                        conversation_parts.append(" ".join(words))
+                    break
+
+                conversation_parts.append(message_text)
+                word_count += message_words
+
+        return (
+            "".join(conversation_parts),
+            second_to_last_message,
+            latest_message,
+        )
 
     def get_message_text(self, message: dict) -> str:
         """Extract text content from message"""
@@ -209,7 +237,12 @@ class GmailAPI:
             if part.get("mimeType") == "text/html":
                 html = self._get_text_from_body(part["body"])
                 if html:
-                    html_content.append(BeautifulSoup(html, "html.parser").get_text())
+                    soup = BeautifulSoup(html, "html.parser")
+                    for br in soup.find_all("br"):
+                        br.replace_with("\n")
+                    for p in soup.find_all("p"):
+                        p.insert_after("\n")
+                    html_content.append(soup.get_text())
             elif part.get("mimeType") == "text/plain":
                 plain_content.append(self._get_text_from_body(part["body"]))
             elif "parts" in part:
