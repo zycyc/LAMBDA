@@ -13,6 +13,10 @@
 A local AI-powered email automation system that learns from your email style and creates draft responses for every unread email in your (Gmail) inbox.
 
 
+https://github.com/user-attachments/assets/e9ffa491-7343-41ae-9cfa-3cca43dad7fb
+
+
+
 - Save time replying to emails -- **JUST Open the draft and Send**
 - Keep all data and model to yourself -- **No cloud, no tracking**
 - Something everyone can use everyday -- **Set up in less than 10 minutes and forget about it**
