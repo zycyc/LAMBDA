@@ -33,7 +33,7 @@ class ModelTrainer:
         df = pd.read_csv(self.dataset_path)
 
         # # for now, use only the first 10 rows
-        # df = df.head(10)
+        df = df.head(5)
 
         # Create formatted examples with chat template
         examples = []
@@ -165,12 +165,11 @@ class ModelTrainer:
         # try:
         from transformers import (
             AutoModelForCausalLM,
-            AutoTokenizer,
             TrainingArguments,
             BitsAndBytesConfig,
         )
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-        from trl import SFTConfig, SFTTrainer
+        from trl import SFTTrainer
         import torch
         from huggingface_hub import login
         from dotenv import load_dotenv
@@ -221,18 +220,14 @@ class ModelTrainer:
 
         # Setup training arguments
         training_args = TrainingArguments(
-            disable_tqdm=False,
+            disable_tqdm=self.fine_tune_config["disable_tqdm"],
             output_dir=self.fine_tune_config["adapter_path"],
             num_train_epochs=self.fine_tune_config["num_epochs"],
             per_device_train_batch_size=self.fine_tune_config["batch_size"],
-            gradient_accumulation_steps=self.fine_tune_config[
-                "gradient_accumulation_steps"
-            ],
             learning_rate=self.fine_tune_config["learning_rate"],
-            logging_steps=self.fine_tune_config["logging_steps"],
-            save_strategy="epoch",
-            evaluation_strategy="epoch",
-            max_grad_norm=self.fine_tune_config["max_grad_norm"],
+            save_strategy=self.fine_tune_config["save_strategy"],
+            evaluation_strategy=self.fine_tune_config["evaluation_strategy"],
+            save_total_limit=self.fine_tune_config["save_total_limit"],
             warmup_ratio=self.fine_tune_config["warmup_ratio"],
             lr_scheduler_type="constant",
         )

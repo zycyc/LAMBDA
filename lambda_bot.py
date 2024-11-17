@@ -18,22 +18,25 @@ class LambdaBot:
         )
         self.model, self.tokenizer = self._load_model()
 
-    def _get_latest_adapter(self) -> Optional[str]:
+    def _get_latest_adapter_path(self) -> Optional[str]:
         """Find the latest adapter file in the adapter directory"""
         if not os.path.exists(self.adapter_dir):
             return None
 
-        # Look for all .safetensors files
-        adapter_files = glob(os.path.join(self.adapter_dir, "*.safetensors"))
+        # Look for all .safetensors files recursively through all subdirectories
+        adapter_files = glob(
+            os.path.join(self.adapter_dir, "**", "*.safetensors"), recursive=True
+        )
         if not adapter_files:
             return None
 
-        # Get the most recently created adapter file
+        # Get the most recently created adapter file's folder path
         latest_adapter = max(adapter_files, key=os.path.getctime)
+        latest_adapter_path = os.path.dirname(os.path.abspath(latest_adapter))
         logging.info(
             f"Found latest adapter: {latest_adapter} (Created: {time.ctime(os.path.getctime(latest_adapter))})"
         )
-        return latest_adapter
+        return latest_adapter_path
 
     def _load_model(self) -> Tuple:
         """Load the appropriate model based on platform and available adapters"""
@@ -53,17 +56,12 @@ class LambdaBot:
             import torch
 
             tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-            # Add padding token configuration
-            # tokenizer.pad_token = tokenizer.eos_token
-            # tokenizer.padding_side = (
-            #     "right"  # This is usually preferred for decoder models
-            # )
 
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_path, torch_dtype=torch.float16, device_map="auto"
             )
             if self.adapter_dir:
-                model.load_adapter(self.adapter_dir)
+                model.load_adapter(self._get_latest_adapter_path())
 
         return model, tokenizer
 
@@ -95,13 +93,14 @@ class LambdaBot:
             inputs = self.tokenizer(
                 prompt,
                 return_tensors="pt",
-                max_length=config.EMAIL_CONFIG["max_response_length"],
+                max_length=config.FINE_TUNE_CONFIG["max_seq_length"],
+                truncation=True,
                 padding=False,
             ).to("cuda")
 
             outputs = self.model.generate(
                 **inputs,
-                max_length=config.EMAIL_CONFIG["max_response_length"],
+                max_new_tokens=config.EMAIL_CONFIG["max_response_length"],
                 num_return_sequences=1,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
@@ -132,12 +131,13 @@ class LambdaBot:
             inputs = self.tokenizer(
                 format_prompt,
                 return_tensors="pt",
-                max_length=config.EMAIL_CONFIG["max_response_length"],
+                max_length=config.FINE_TUNE_CONFIG["max_seq_length"],
+                truncation=True,
                 padding=False,
             ).to("cuda")
             outputs = self.model.generate(
                 **inputs,
-                max_length=config.EMAIL_CONFIG["max_response_length"],
+                max_new_tokens=config.EMAIL_CONFIG["max_response_length"],
                 num_return_sequences=1,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
@@ -199,6 +199,10 @@ class LambdaBot:
                     thread_id=msg_detail["threadId"],
                 )
 
+                logging.info(
+                    f"Draft for email from: {self.gmail_api._get_header(msg_detail, 'From')}, snippet: {msg_detail['snippet']} has been generated and saved \n"
+                )
+
             except Exception as e:
                 logging.error(f"Error processing message {message['id']}: {str(e)}")
                 continue
@@ -233,7 +237,7 @@ def main():
 
     while True:
         try:
-            logging.info(f"Processing unread emails...")
+            logging.info("Processing unread emails...")
             bot.process_unread_emails()
             time.sleep(args.interval)
         except KeyboardInterrupt:

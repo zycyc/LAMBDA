@@ -60,17 +60,18 @@ FINE_TUNE_CONFIG_MLX = {
 
 # Configuration for CUDA/Transformers training
 FINE_TUNE_CONFIG_CUDA = {
+    "disable_tqdm": False,
     "batch_size": 4,
     "num_epochs": 3,
-    "learning_rate": 2e-4,
+    "learning_rate": 1e-5,
     "max_seq_length": 2048,
-    "gradient_accumulation_steps": 4,
-    "logging_steps": 10,
-    "max_grad_norm": 0.3,
-    "warmup_ratio": 0.03,
+    "warmup_ratio": 0.05,
+    "save_strategy": "epoch",
+    "evaluation_strategy": "epoch",
+    "save_total_limit": 1,
     "lora_config": {
-        "r": 16,
-        "lora_alpha": 32,
+        "r": 8,
+        "lora_alpha": 16,
         "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj"],
         "lora_dropout": 0.05,
         "bias": "none",
