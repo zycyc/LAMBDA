@@ -7,15 +7,30 @@ pyyaml==6.0.2
 beautifulsoup4==4.12.3
 scikit-learn==1.5.2
 tqdm
+python-dotenv
 
 # MLX dependencies (for Mac)
 mlx==0.20.0 ; platform_system == "Darwin" and platform_machine == "arm64"
 mlx-lm==0.19.3 ; platform_system == "Darwin" and platform_machine == "arm64"
 
-# Transformers dependencies (for CUDA)
-torch ; platform_system != "Darwin"
+# PyTorch dependencies based on platform
+# For Windows CUDA
+torch ; platform_system == "Windows"
+torchvision ; platform_system == "Windows"
+torchaudio ; platform_system == "Windows"
+--extra-index-url https://download.pytorch.org/whl/cu124 ; platform_system == "Windows"
+
+# For Linux
+torch ; platform_system == "Linux"
+torchvision ; platform_system == "Linux"
+torchaudio ; platform_system == "Linux"
+
+# Common ML dependencies
 transformers ; platform_system != "Darwin"
-safetensors ; platform_system != "Darwin"
+peft ; platform_system != "Darwin"
+trl ; platform_system != "Darwin"
+# bitsandbytes ; platform_system != "Darwin"
+# safetensors ; platform_system != "Darwin"
 
 # Utilities
 requests==2.32.3

@@ -41,8 +41,8 @@ RESPONSE_TEMPLATE = """{bot_signature}
 
 """
 
-# Default fine-tuning configuration
-FINE_TUNE_CONFIG = {
+# Default fine-tuning configuration for MLX
+FINE_TUNE_CONFIG_MLX = {
     "fine_tune_type": "lora",
     "iters": 1000,
     "batch_size": 4,
@@ -57,3 +57,34 @@ FINE_TUNE_CONFIG = {
     "seed": 42,
     "resume_adapter_file": None,
 }
+
+# Configuration for CUDA/Transformers training
+FINE_TUNE_CONFIG_CUDA = {
+    "batch_size": 4,
+    "num_epochs": 3,
+    "learning_rate": 2e-4,
+    "max_seq_length": 2048,
+    "gradient_accumulation_steps": 4,
+    "logging_steps": 10,
+    "max_grad_norm": 0.3,
+    "warmup_ratio": 0.03,
+    "lora_config": {
+        "r": 16,
+        "lora_alpha": 32,
+        "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj"],
+        "lora_dropout": 0.05,
+        "bias": "none",
+        "task_type": "CAUSAL_LM",
+    },
+    "quantization": {
+        "load_in_4bit": True,
+        "bnb_4bit_compute_dtype": "float16",
+        "bnb_4bit_quant_type": "nf4",
+        "bnb_4bit_use_double_quant": True,
+    },
+}
+
+# Select appropriate config based on framework
+FINE_TUNE_CONFIG = (
+    FINE_TUNE_CONFIG_MLX if TRAINING_FRAMEWORK == "mlx" else FINE_TUNE_CONFIG_CUDA
+)

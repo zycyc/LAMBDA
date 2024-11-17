@@ -8,6 +8,7 @@ import subprocess
 import yaml
 from sklearn.model_selection import train_test_split
 
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 
@@ -31,17 +32,20 @@ class ModelTrainer:
         """
         df = pd.read_csv(self.dataset_path)
 
+        # # for now, use only the first 10 rows
+        # df = df.head(10)
+
         # Create formatted examples with chat template
         examples = []
         for _, row in df.iterrows():
             # Format as chat messages
             messages = [
-                {"role": "system", "content": config.EMAIL_CONFIG["system_prompt"]},
                 {
-                    "role": "user",
-                    "content": row["prompt"],
+                    "role": "system",
+                    "content": str(config.EMAIL_CONFIG["system_prompt"]),
                 },
-                {"role": "assistant", "content": row["completion"]},
+                {"role": "user", "content": str(row["prompt"])},
+                {"role": "assistant", "content": str(row["completion"])},
             ]
 
             examples.append({"messages": messages})
@@ -139,6 +143,127 @@ class ModelTrainer:
         except Exception as e:
             logging.error(f"Error in MLX training: {str(e)}")
             yield f"Error in MLX training: {str(e)}"
+
+    def _train_transformers(self):
+        """Train using HuggingFace Transformers with QLoRA"""
+        try:
+            # Prepare dataset in JSONL format
+            data_dir, train_path, _, valid_path = self.prepare_dataset()
+            logging.info(f"Done preparing dataset. Data directory: {data_dir}")
+
+            # Save fine-tuning config
+            config_path = os.path.join(self.output_dir, "fine_tune.yaml")
+            with open(config_path, "w") as f:
+                yaml.dump(self.fine_tune_config, f)
+                logging.info(
+                    f"Done saving fine-tuning config. Config path: {config_path}"
+                )
+        except Exception as e:
+            logging.error(f"Error in preparing dataset: {str(e)}")
+            yield f"Error in preparing dataset: {str(e)}"
+
+        # try:
+        from transformers import (
+            AutoModelForCausalLM,
+            AutoTokenizer,
+            TrainingArguments,
+            BitsAndBytesConfig,
+        )
+        from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+        from trl import SFTConfig, SFTTrainer
+        import torch
+        from huggingface_hub import login
+        from dotenv import load_dotenv
+        from datasets import load_dataset
+
+        # Check for CUDA availability first
+        if not torch.cuda.is_available():
+            logging.error("CUDA is not available. This training requires a GPU.")
+            return "Training requires CUDA-enabled GPU."
+
+        # Try to load token from .env file
+        load_dotenv()
+        hf_token = os.environ.get("HF_TOKEN")
+
+        # If token not found, prompt user and save to .env
+        if not hf_token:
+            hf_token = input("Please enter your HuggingFace token: ")
+            with open(".env", "a") as f:
+                f.write(f"\nHF_TOKEN={hf_token}")
+            os.environ["HF_TOKEN"] = hf_token
+            logging.info("Token saved to .env file")
+
+        login(token=hf_token)
+
+        # Convert deprecated quantization config to BitsAndBytesConfig
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+
+        # Load base model with updated quantization config
+        model = AutoModelForCausalLM.from_pretrained(
+            config.BASE_MODEL,
+            quantization_config=quantization_config,
+            device_map="auto",
+        )
+
+        # Prepare model for k-bit training
+        model = prepare_model_for_kbit_training(model)
+
+        # Configure LoRA
+        lora_config = LoraConfig(**self.fine_tune_config["lora_config"])
+
+        # Get PEFT model
+        model = get_peft_model(model, lora_config)
+
+        # Setup training arguments
+        training_args = TrainingArguments(
+            disable_tqdm=False,
+            output_dir=self.fine_tune_config["adapter_path"],
+            num_train_epochs=self.fine_tune_config["num_epochs"],
+            per_device_train_batch_size=self.fine_tune_config["batch_size"],
+            gradient_accumulation_steps=self.fine_tune_config[
+                "gradient_accumulation_steps"
+            ],
+            learning_rate=self.fine_tune_config["learning_rate"],
+            logging_steps=self.fine_tune_config["logging_steps"],
+            save_strategy="epoch",
+            evaluation_strategy="epoch",
+            max_grad_norm=self.fine_tune_config["max_grad_norm"],
+            warmup_ratio=self.fine_tune_config["warmup_ratio"],
+            lr_scheduler_type="constant",
+        )
+
+        # Load training dataset
+        train_dataset = load_dataset("json", data_files=train_path, split="train")
+        print("train dataset", train_dataset)
+        eval_dataset = load_dataset("json", data_files=valid_path, split="train")
+
+        # Initialize SFT trainer
+        trainer = SFTTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            max_seq_length=self.fine_tune_config["max_seq_length"],
+        )
+
+        # Train model
+        logging.info("Training started...")
+        trainer.train()
+
+        # Save trained model
+        trainer.save_model()
+
+        logging.info("Training completed successfully")
+        yield "Training completed successfully"
+
+        # except Exception as e:
+        #     logging.error(f"Error in Transformers training: {str(e)}")
+        #     yield f"Error in Transformers training: {str(e)}"
 
 
 def find_latest_adapter_file(adapter_path: str) -> Optional[str]:

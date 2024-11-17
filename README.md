@@ -26,11 +26,38 @@ cd LAMBDA
 ```
 
 2. Install dependencies:
+
+For Mac (Apple Silicon) and Linux:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+For Linux:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+For Windows:
+```powershell
+python -m venv .venv
+Set-ExecutionPolicy Unrestricted -Scope Process
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Note: If you encounter any issues with PyTorch installation:
+- For Windows, you can manually install PyTorch with CUDA using:
+  ```powershell
+  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+  ```
+- For Linux, you can manually install PyTorch using:
+  ```bash
+  pip3 install torch torchvision torchaudio
+  ```
 
 3. Enable Gmail API and Setup Credentials (only takes about 5 minutes):
    1. Go to [Google Cloud Console](https://console.cloud.google.com/)

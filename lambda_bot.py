@@ -23,14 +23,17 @@ class LambdaBot:
         if not os.path.exists(self.adapter_dir):
             return None
 
-        # Look for adapter files (assuming they end with .adapter)
-        adapter_files = glob(os.path.join(self.adapter_dir, "adapters.safetensors"))[0]
+        # Look for all .safetensors files
+        adapter_files = glob(os.path.join(self.adapter_dir, "*.safetensors"))
         if not adapter_files:
             return None
 
-        # Get the most recently modified adapter file
-        logging.info(f"Found latest adapter: {adapter_files}")
-        return adapter_files
+        # Get the most recently created adapter file
+        latest_adapter = max(adapter_files, key=os.path.getctime)
+        logging.info(
+            f"Found latest adapter: {latest_adapter} (Created: {time.ctime(os.path.getctime(latest_adapter))})"
+        )
+        return latest_adapter
 
     def _load_model(self) -> Tuple:
         """Load the appropriate model based on platform and available adapters"""
@@ -49,16 +52,18 @@ class LambdaBot:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             import torch
 
+            tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+            # Add padding token configuration
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.padding_side = (
+                "right"  # This is usually preferred for decoder models
+            )
+
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_path, torch_dtype=torch.float16, device_map="auto"
             )
-            tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-
             if self.adapter_dir:
-                logging.info(f"Loading adapter weights from: {self.adapter_dir}")
-                # For transformers, you might need to implement adapter loading
-                # depending on your adapter format
-                pass
+                model.load_adapter(self.adapter_dir)
 
         return model, tokenizer
 
