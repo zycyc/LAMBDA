@@ -75,9 +75,11 @@ def train_model():
             "python train_model.py --dataset email_dataset.csv --output model_output"
         )
         logger.info("Model training completed")
+        return True
     except Exception as e:
         logger.error(f"Failed to train model: {str(e)}")
         sys.exit(1)
+        return False
 
 
 def run_email_bot():
@@ -88,6 +90,19 @@ def run_email_bot():
     except Exception as e:
         logger.error(f"Failed to run email bot: {str(e)}")
         sys.exit(1)
+
+
+def run_workflow():
+    create_dataset()
+    
+    # Try training, exit if failed
+    if not train_model():
+        logger.error("Training failed, stopping workflow")
+        return False
+        
+    # Only run bot if training was successful
+    run_email_bot()
+    return True
 
 
 def main():
@@ -127,9 +142,7 @@ def main():
         elif choice == "3":
             run_email_bot()
         elif choice == "4":
-            create_dataset()
-            train_model()
-            run_email_bot()
+            run_workflow()
         elif choice == "5":
             logger.info("Exiting LAMBDA...")
             break
