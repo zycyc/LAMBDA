@@ -41,17 +41,19 @@ class LambdaBot:
 
     def _load_model(self) -> Tuple:
         """Load the appropriate model based on platform and available adapters"""
-
         if config.IS_MAC:
             from mlx_lm import load
-
-            if self.adapter_dir:
-                logging.info(f"Loading model with adapter from: {self.adapter_dir}")
-                model, tokenizer = load(self.model_path, adapter_path=self.adapter_dir)
-            else:
-                logging.info("Loading base model without adapter")
+            try:
+                if self.adapter_dir:
+                    logging.info(f"Loading model with adapter from: {self.adapter_dir}")
+                    model, tokenizer = load(self.model_path, adapter_path=self.adapter_dir)
+                else:
+                    logging.info("Loading base model without adapter")
+                    model, tokenizer = load(self.model_path)
+            except RuntimeError as e:
+                logging.warning(f"Failed to load adapter: {e}")
+                logging.info("Falling back to base model")
                 model, tokenizer = load(self.model_path)
-
         else:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             import torch
