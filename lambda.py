@@ -71,13 +71,21 @@ def train_model():
     """Train the model using the created dataset."""
     try:
         logger.info("Starting model training...")
-        os.system(
+        # Run training script and capture return code
+        return_code = os.system(
             "python train_model.py --dataset email_dataset.csv --output model_output"
         )
-        logger.info("Model training completed")
+        
+        if return_code == 0:
+            logger.info("Model training completed successfully")
+            return True
+        else:
+            logger.warning("Model training failed, will continue without adapter")
+            return False
+            
     except Exception as e:
-        logger.error(f"Failed to train model: {str(e)}")
-        sys.exit(1)
+        logger.warning(f"Failed to train model: {str(e)}, will continue without adapter")
+        return False
 
 
 def run_email_bot():
@@ -88,6 +96,19 @@ def run_email_bot():
     except Exception as e:
         logger.error(f"Failed to run email bot: {str(e)}")
         sys.exit(1)
+
+
+def run_workflow():
+    create_dataset()
+    
+    # Try training, but continue even if it fails
+    training_success = train_model()
+    if not training_success:
+        logger.warning("Training failed, continuing with base model only")
+    
+    # Run bot regardless of training outcome
+    run_email_bot()
+    return True
 
 
 def main():
@@ -127,9 +148,7 @@ def main():
         elif choice == "3":
             run_email_bot()
         elif choice == "4":
-            create_dataset()
-            train_model()
-            run_email_bot()
+            run_workflow()
         elif choice == "5":
             logger.info("Exiting LAMBDA...")
             break
